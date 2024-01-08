@@ -321,16 +321,15 @@ fn match_relative(
     let count = result.0(duration);
 
     let result = if count > 0 {
-        upto.map_or_else(
-            || Some((count, result.1(count))),
-            |u| {
-                if count <= u {
-                    Some((count, result.1(count)))
-                } else {
-                    None
-                }
-            },
-        )
+        if let Some(upto) = upto {
+            if count <= upto {
+                Some((count, result.1(count)))
+            } else {
+                None
+            }
+        } else {
+            Some((count, result.1(count)))
+        }
     } else {
         None
     };
