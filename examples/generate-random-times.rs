@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::{prelude::*, Duration};
+use chrono::{Duration, Local};
 
 fn main() -> Result<()> {
     let count: usize = std::env::args()
