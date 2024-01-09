@@ -37,7 +37,7 @@ let approx = approximator!(
 );
 
 let dt2 = chrono::Local::now() + chrono::Duration::days(45 * 365 + 2); // account for leap
-                                                                   // years
+                                                                       // years
 assert_eq!("45 years and 4 days", time_diff!(dt2, dt, approx).unwrap());
 
 let approx = approximator!(
