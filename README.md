@@ -2,7 +2,7 @@
 
 Speakable time in this case, are time periods or intervals that are used informally, times like "10 years ago" or "next week". This library aims to deconstruct times in a way that they can be treated like a grammar for generating human-friendly times.
 
-To accomplish this, we seed an Approximator with a list of selectors called ApproximateFilters, and a FormatGenerator, of which there are currently two styles: CoarseRoundFormat and FancyDurationFormat. The approximator computes durations into tokenized parts (called ApproximateState) which are picked out by the ApproximateFilters, which are then fed to the formatter of choice to generate a syntax. Then, a [Translator] is used to convert that final syntax into something you can read. It is fully localized and flexible.
+To accomplish this, we seed an Approximator with a list of selectors called ApproximateFilters, and a FormatGenerator, of which there are currently two styles: CoarseRoundFormat and FancyDurationFormat. The approximator computes durations into tokenized parts (called ApproximateState) which are picked out by the ApproximateFilters, which are then fed to the formatter of choice to generate a syntax. Then, a Translator is used to convert that final syntax into something you can read. It is fully localized and flexible.
 
 There a few macros to make this easier. If the `translation` feature is enabled, it will allow you to provide translation maps as YAML files that live in your build directory. It will then select the right mapping to use for a given locale automatically on boot.
 
