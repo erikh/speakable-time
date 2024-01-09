@@ -1,4 +1,4 @@
-use super::enums::{Words, DAY, HOUR, MINUTE, MONTH, WEEK, YEAR};
+use super::enums::Words;
 use chrono::prelude::*;
 
 /// Time boundaries denote changes in the type of time, from a series of seconds to a series of
@@ -87,15 +87,15 @@ impl TimeBoundary {
     /// Does the difference of these two times span this boundary?
     #[inline]
     pub fn within(&self, dt: DateTime<Local>, dt2: DateTime<Local>) -> bool {
-        let abs = crate::absolute_duration(dt, dt2).num_seconds();
+        let abs = crate::absolute_duration(dt, dt2);
         match self {
-            Self::Second => abs < MINUTE,
-            Self::Minute => abs > MINUTE && abs < HOUR,
-            Self::Hour => abs > HOUR && abs < DAY,
-            Self::Day => abs > DAY && abs < MONTH,
-            Self::Week => abs > WEEK && abs % WEEK < DAY,
-            Self::Month => abs > MONTH && abs % MONTH < WEEK,
-            Self::Year => abs > YEAR && abs % YEAR < MONTH,
+            Self::Second => abs.num_seconds() < 60,
+            Self::Minute => abs.num_minutes() > 1 && abs.num_hours() == 0,
+            Self::Hour => abs.num_hours() > 1 && abs.num_days() == 0,
+            Self::Day => abs.num_days() > 1 && abs.num_days() < 30,
+            Self::Week => abs.num_weeks() > 1 && abs.num_days() < 30,
+            Self::Month => abs.num_days() > 30 && abs.num_days() < 365,
+            Self::Year => abs.num_days() > 365,
         }
     }
 }

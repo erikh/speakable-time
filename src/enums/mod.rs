@@ -1,19 +1,6 @@
 mod words;
 pub use self::words::Words;
 
-/// Number of seconds in a minute
-pub const MINUTE: i64 = 60;
-/// Number of seconds in an hour
-pub const HOUR: i64 = 60 * MINUTE;
-/// Number of seconds in a day
-pub const DAY: i64 = 24 * HOUR;
-/// Number of seconds in a week
-pub const WEEK: i64 = 7 * DAY;
-/// Number of seconds in a month (30 days)
-pub const MONTH: i64 = 30 * DAY;
-/// Number of seconds in a year (365 days)
-pub const YEAR: i64 = 365 * DAY;
-
 /// A list of months in order. They are numerically indexed, string indexed and can be
 /// cross-converted to several other types.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

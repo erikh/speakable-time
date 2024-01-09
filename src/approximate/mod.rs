@@ -5,7 +5,7 @@ pub mod format_generator;
 pub use self::format_generator::formats::{CoarseRoundFormat, FancyDurationFormat};
 
 use self::format_generator::FormatGenerator;
-use super::enums::{Month, Weekday, MONTH, WEEK, YEAR};
+use super::enums::{Month, Weekday};
 use crate::time_boundary::TimeBoundary;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -265,13 +265,13 @@ where
                     }
                 }
                 ApproximateFilter::MonthNameWithinYear => {
-                    if duration.num_seconds() < YEAR {
+                    if duration.num_days() < 365 {
                         let name: Month = dt.month0().into();
                         state.push(ApproximateState::MonthName(name));
                     }
                 }
                 ApproximateFilter::DayNameWithinWeek => {
-                    if duration.num_seconds() < WEEK {
+                    if duration.num_days() < 7 {
                         let name: Weekday = dt.weekday().into();
                         state.push(ApproximateState::DayName(name));
                     }
@@ -305,11 +305,11 @@ fn match_relative(
     upto: Option<i64>,
 ) -> Option<ApproximateState> {
     let result: (&dyn Fn(&Duration) -> i64, &dyn Fn(i64) -> Duration) = match relative {
-        TimeBoundary::Year => (&|dur: &Duration| dur.num_seconds() / YEAR, &|count| {
-            Duration::seconds(count * YEAR)
+        TimeBoundary::Year => (&|dur: &Duration| dur.num_days() / 365, &|count| {
+            Duration::seconds(count * Duration::days(365).num_seconds())
         }),
-        TimeBoundary::Month => (&|dur: &Duration| dur.num_seconds() / MONTH, &|count| {
-            Duration::seconds(count * MONTH)
+        TimeBoundary::Month => (&|dur: &Duration| dur.num_days() / 30, &|count| {
+            Duration::seconds(count * Duration::days(30).num_seconds())
         }),
         TimeBoundary::Week => (&Duration::num_weeks, &Duration::weeks),
         TimeBoundary::Day => (&Duration::num_days, &Duration::days),
