@@ -202,6 +202,8 @@ where
         }
     }
 
+    /// Compute the tokens just understood for Durations. This is a limited subset of
+    /// [Approximator::difference] and [Approximator::from_now].
     pub fn duration(&self, duration: chrono::Duration) -> StateFormatter<T> {
         StateFormatter {
             states: self.for_duration(None, duration),
