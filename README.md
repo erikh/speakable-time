@@ -14,33 +14,44 @@ There are plenty of docs for writing your own formatter, too. Just see FormatGen
 use speakable_time::prelude::*;
 
 let approx = approximator!(
+    // Use a format that lays heavily on the english
     CoarseRoundFormat::default(),
+    // Round to the nearest day
     ApproximateFilter::Round(TimeBoundary::Day),
+    // Indicate whether or not the compared time is in the future or past
     ApproximateFilter::Relative
 );
 
 let dt = chrono::Local::now() - chrono::Duration::days(2);
 
+// from_now! compares the dt against the current time and applies the approximator, and runs
+// it through the default translation.
 assert_eq!("2 days ago", from_now!(dt, approx).unwrap());
 
+// Here we'll round to the nearest year and day, but not indicate future or past. Watch how
+// the output changes!
 let approx = approximator!(
     CoarseRoundFormat::default(),
     ApproximateFilter::Round(TimeBoundary::Year),
-    ApproximateFilter::Relative
+    ApproximateFilter::Round(TimeBoundary::Day)
 );
 
-let dt2 = chrono::Local::now() - chrono::Duration::days(46 * 365); // account for leap
+let dt2 = chrono::Local::now() + chrono::Duration::days(45 * 365 + 2); // account for leap
                                                                    // years
-assert_eq!("45 years ago", time_diff!(dt2, dt, approx).unwrap());
+assert_eq!("45 years and 4 days", time_diff!(dt2, dt, approx).unwrap());
 
 let approx = approximator!(
+    // Here we use an abbreviated format that is also used by the `fancy-duration` crate.
     FancyDurationFormat::default(),
-    ApproximateFilter::TopRounds(1),
+    // We're going to round to the two largest values
+    ApproximateFilter::TopRounds(2),
+    // Show past or present
     ApproximateFilter::Relative
 );
 
-assert_eq!("45y ago", time_diff!(dt2, dt, approx).unwrap());
+assert_eq!("in 45y4d", time_diff!(dt2, dt, approx).unwrap());
 
+// Here's the same approximation applied to a date that is just 2 days from now
 assert_eq!(
     "in 2d",
     time_diff!(
