@@ -193,49 +193,38 @@ where
 
         state.push(ApproximateState::WithDate(dt.date_naive()));
         state.push(ApproximateState::WithTime(dt.time()));
+        let duration = dt - against;
+        state = self.for_duration(Some(state.clone()), duration);
+        state = self.for_time_and_duration(Some(state.clone()), dt, duration);
+        StateFormatter {
+            states: state,
+            obj: self.obj.clone(),
+        }
+    }
 
-        let mut duration = crate::absolute_duration(dt, against);
+    pub fn duration(&self, duration: chrono::Duration) -> StateFormatter<T> {
+        StateFormatter {
+            states: self.for_duration(None, duration),
+            obj: self.obj.clone(),
+        }
+    }
 
-        'item: for item in &self.filter {
+    fn for_time_and_duration(
+        &self,
+        state: Option<StateCollection>,
+        dt: DateTime<Local>,
+        duration: Duration,
+    ) -> StateCollection {
+        let mut state = if let Some(state) = state {
+            state
+        } else {
+            StateCollection::default()
+        };
+
+        let duration = duration.abs();
+
+        for item in &self.filter {
             match item {
-                ApproximateFilter::TopRounds(count) => {
-                    let mut added = 0;
-                    for relative in TimeBoundary::all() {
-                        if added >= *count {
-                            continue 'item;
-                        }
-
-                        let new_state = match_relative(&mut duration, relative, None);
-                        if let Some(new_state) = new_state {
-                            added += 1;
-                            state.push(new_state);
-                        }
-                    }
-                }
-                ApproximateFilter::TopRoundsMaxRelative(count, relative) => {
-                    let mut added = 0;
-                    for cur in &TimeBoundary::all() {
-                        if added >= *count {
-                            continue 'item;
-                        }
-
-                        if relative < cur {
-                            continue;
-                        }
-
-                        let new_state = match_relative(&mut duration, cur.clone(), None);
-                        if let Some(new_state) = new_state {
-                            added += 1;
-                            state.push(new_state);
-                        }
-                    }
-                }
-                ApproximateFilter::Relative => {
-                    // do not use duration here, it is absolute by now
-                    state.push(ApproximateState::InPast(
-                        against - dt > Duration::seconds(0),
-                    ));
-                }
                 ApproximateFilter::ApproximateTime => {
                     let hour = dt.hour();
 
@@ -276,6 +265,67 @@ where
                         state.push(ApproximateState::DayName(name));
                     }
                 }
+                _ => {}
+            }
+        }
+
+        state
+    }
+
+    fn for_duration(
+        &self,
+        state: Option<StateCollection>,
+        duration: chrono::Duration,
+    ) -> StateCollection {
+        let mut state = if let Some(state) = state {
+            state
+        } else {
+            StateCollection::default()
+        };
+
+        let orig_duration = duration;
+        let mut duration = duration.abs();
+
+        'item: for item in &self.filter {
+            match item {
+                ApproximateFilter::TopRounds(count) => {
+                    let mut added = 0;
+                    for relative in TimeBoundary::all() {
+                        if added >= *count {
+                            continue 'item;
+                        }
+
+                        let new_state = match_relative(&mut duration, relative, None);
+                        if let Some(new_state) = new_state {
+                            added += 1;
+                            state.push(new_state);
+                        }
+                    }
+                }
+                ApproximateFilter::TopRoundsMaxRelative(count, relative) => {
+                    let mut added = 0;
+                    for cur in &TimeBoundary::all() {
+                        if added >= *count {
+                            continue 'item;
+                        }
+
+                        if relative < cur {
+                            continue;
+                        }
+
+                        let new_state = match_relative(&mut duration, cur.clone(), None);
+                        if let Some(new_state) = new_state {
+                            added += 1;
+                            state.push(new_state);
+                        }
+                    }
+                }
+                ApproximateFilter::Relative => {
+                    // do not use duration here, it is absolute by now
+                    state.push(ApproximateState::InPast(
+                        orig_duration < Duration::seconds(0),
+                    ));
+                }
                 ApproximateFilter::Round(relative) => {
                     let new_state = match_relative(&mut duration, relative.clone(), None);
                     if let Some(new_state) = new_state {
@@ -288,13 +338,11 @@ where
                         state.push(new_state)
                     }
                 }
+                _ => {}
             }
         }
 
-        StateFormatter {
-            states: state,
-            obj: self.obj.clone(),
-        }
+        state
     }
 }
 
@@ -389,6 +437,11 @@ mod tests {
             NaiveDate::from_ymd_opt(1978, 4, 6).unwrap()
         )));
 
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
+
         let approximator =
             Approximator::new(vec![ApproximateFilter::TopRounds(4)], EmptyFormatGenerator);
 
@@ -397,6 +450,11 @@ mod tests {
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Month, 9)));
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Week, 2)));
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Day, 3)));
+
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
 
         let date = NaiveDateTime::new(
             NaiveDate::from_ymd_opt(2024, 1, 3).unwrap(),
@@ -420,6 +478,11 @@ mod tests {
         let states = approximator.difference(date, date2);
         assert!(states.contains(&ApproximateState::DayName(Weekday::Wednesday)));
 
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
+
         let date = NaiveDateTime::new(
             NaiveDate::from_ymd_opt(2024, 4, 3).unwrap(),
             NaiveTime::from_hms_opt(6, 0, 0).unwrap(),
@@ -442,6 +505,11 @@ mod tests {
         let states = approximator.difference(date, date2);
         assert!(states.contains(&ApproximateState::MonthName(Month::April)));
 
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
+
         let approximator = Approximator::new(
             vec![
                 ApproximateFilter::RoundWithBound(TimeBoundary::Month, 2),
@@ -453,6 +521,11 @@ mod tests {
         let states = approximator.difference(date, date2);
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Month, 2)));
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Day, 26)));
+
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
 
         let date = NaiveDateTime::new(
             NaiveDate::from_ymd_opt(2024, 1, 7).unwrap(),
@@ -478,6 +551,11 @@ mod tests {
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Hour, 1)));
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Minute, 3)));
 
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
+
         let approximator = Approximator::new(
             vec![ApproximateFilter::TopRoundsMaxRelative(
                 3,
@@ -489,6 +567,11 @@ mod tests {
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Hour, 1)));
         assert!(states.contains(&ApproximateState::Value(TimeBoundary::Minute, 3)));
 
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
+
         let approximator = Approximator::new(
             vec![ApproximateFilter::TopRoundsMaxRelative(
                 3,
@@ -499,5 +582,10 @@ mod tests {
         let states = approximator.difference(date, date2);
         assert!(!states.contains(&ApproximateState::Value(TimeBoundary::Hour, 1)));
         assert!(!states.contains(&ApproximateState::Value(TimeBoundary::Minute, 3)));
+
+        let duration_states = approximator.duration(date - date2);
+        for state in &duration_states.states().0 {
+            assert!(states.contains(state))
+        }
     }
 }
